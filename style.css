@@ -36,3 +36,75 @@ select:hover, button:hover { background-color: var(--accent-orange); border-colo
     .board-container { flex-direction: column; align-items: center; }
     .list { width: 100%; max-width: 400px; }
 }
+
+/* Loader Styles */
+.loader-overlay {
+    display: none; /* Hide by default */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 2000;
+    justify-content: center;
+    align-items: center;
+}
+
+.loader-content {
+    text-align: center;
+    color: var(--accent-yellow);
+}
+
+.spinner {
+    border: 4px solid var(--light-blue);
+    border-top: 4px solid var(--accent-yellow);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Delete Button Styles */
+.delete-btn {
+    background-color: #9d0208; /* Dark Red */
+    border-color: #9d0208;
+}
+
+.delete-btn:hover {
+    background-color: #e5383b;
+    border-color: #e5383b;
+    color: var(--text-color);
+}
+
+/* Task Delete Icon */
+.task {
+    position: relative;
+}
+
+.delete-task-btn {
+    position: absolute;
+    top: 5px;
+    right: 8px;
+    background: none;
+    border: none;
+    color: var(--text-color);
+    opacity: 0.5;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: opacity 0.2s;
+}
+
+.task:hover .delete-task-btn {
+    opacity: 1;
+}
+
+.delete-task-btn:hover {
+    color: var(--accent-orange);
+}
