@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const sendEmailLink = document.getElementById('send-email-link');
 
     // --- PASTE YOUR GOOGLE SCRIPT URL HERE ---
-    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxuyGQr4qwjXXEtS_CB8CvkbY8BKVRFyZK0M_y7kwR2JBQR3B69rtZ5sUxnR1pup6u0/exec'; // << ❗❗❗ วาง URL ของคุณที่นี่ ❗❗❗
+    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxtwebPHTaE2r1qBh_E4n72MiO24hhHhc9b71NMzXldsT3gmcgDCMUnNxJ8U0Z55vK_/exec'; // << ❗❗❗ วาง URL ของคุณที่นี่ ❗❗❗
 
     let data = {};
 
