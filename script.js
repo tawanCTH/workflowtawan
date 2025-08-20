@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const taskDueDateInput = document.getElementById('task-due-date');
 
     // --- PASTE YOUR GOOGLE SCRIPT URL HERE ---
-    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw2PDagLHHkp-Kcple_HO65y6CsWtc60dFiWKSapd-FrBVyyDnUjQD5tp0PIKTO5Ian3Q/exec'; // << ❗❗❗ วาง URL ล่าสุดของคุณที่นี่ ❗❗❗
+    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/ABC.../exec'; // << ❗❗❗ วาง URL ล่าสุดของคุณที่นี่ ❗❗❗
 
     let data = {};
 
@@ -70,20 +70,73 @@ document.addEventListener('DOMContentLoaded', () => {
     function render() { renderProjectSelector(); renderBoard(); }
     function renderProjectSelector() { projectSelect.innerHTML = ''; data.projects.forEach(project => { const option = document.createElement('option'); option.value = project.id; option.textContent = project.name; if (project.id === data.currentProjectId) { option.selected = true; } projectSelect.appendChild(option); }); }
     function renderBoard() { boardContainer.innerHTML = ''; const project = findCurrentProject(); if (!project) return; project.lists.forEach(list => { const listEl = document.createElement('div'); listEl.className = 'list'; listEl.dataset.listId = list.id; listEl.innerHTML = `<div class="list-header"><h2 class="list-title" contenteditable="true">${list.name}</h2><button class="add-task-btn" data-list-id="${list.id}">+</button></div><div class="task-list"></div>`; const taskListEl = listEl.querySelector('.task-list'); list.tasks.forEach(task => { const taskEl = createTaskElement(task, list.id); taskListEl.appendChild(taskEl); }); boardContainer.appendChild(listEl); }); }
-    function createTaskElement(task, listId) { const taskEl = document.createElement('div'); taskEl.className = 'task'; taskEl.draggable = true; taskEl.dataset.taskId = task.id; taskEl.dataset.listId = listId; let dueDateHTML = ''; if (task.dueDate) { const date = new Date(task.dueDate); dueDateHTML = `<div class="task-due-date">แจ้งเตือน: ${date.toLocaleString('th-TH')}</div>`; } taskEl.innerHTML = `<button class="delete-task-btn" title="ลบทาสก์นี้">&times;</button><h4>${task.title}</h4><p>${task.description}</p>${dueDateHTML}`; return taskEl; }
+    
+    // --- MODIFIED: createTaskElement with JS Truncation ---
+    function createTaskElement(task, listId) {
+        const taskEl = document.createElement('div');
+        taskEl.className = 'task';
+        taskEl.draggable = true;
+        taskEl.dataset.taskId = task.id;
+        taskEl.dataset.listId = listId;
+        // Store the full description in a data attribute
+        taskEl.dataset.fullDescription = task.description || '';
+
+        let descriptionHtml = task.description || '';
+        if (descriptionHtml.length > 50) {
+            descriptionHtml = `${descriptionHtml.substring(0, 50)}... <a href="#" class="show-more-link"> (กดเพื่อดูเพิ่มเติม)</a>`;
+        }
+
+        let dueDateHTML = '';
+        if (task.dueDate) {
+            const date = new Date(task.dueDate);
+            dueDateHTML = `<div class="task-due-date">แจ้งเตือน: ${date.toLocaleString('th-TH')}</div>`;
+        }
+
+        taskEl.innerHTML = `
+            <button class="delete-task-btn" title="ลบทาสก์นี้">&times;</button>
+            <h4>${task.title}</h4>
+            <p>${descriptionHtml}</p>
+            ${dueDateHTML}
+        `;
+        return taskEl;
+    }
+
 
     // --- EVENT HANDLERS ---
     addProjectBtn.addEventListener('click', async () => { const projectName = prompt('กรุณาใส่ชื่อโปรเจกต์ใหม่:'); if (projectName) { const newProject = { id: `proj-${Date.now()}`, name: projectName, lists: [{ id: `list-${Date.now()}-1`, name: "Todo", tasks: [] }, { id: `list-${Date.now()}-2`, name: "In Progress", tasks: [] }, { id: `list-${Date.now()}-3`, name: "Complete", tasks: [] }] }; data.projects.push(newProject); data.currentProjectId = newProject.id; await saveData({ type: 'project_create', projectName: projectName }); render(); } });
     deleteProjectBtn.addEventListener('click', async () => { const project = findCurrentProject(); if (!project) { alert("ไม่มีโปรเจกต์ให้ลบ"); return; } if (confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบโปรเจกต์ "${project.name}" ทั้งหมด?`)) { data.projects = data.projects.filter(p => p.id !== data.currentProjectId); const deletedProjectName = project.name; data.currentProjectId = data.projects.length > 0 ? data.projects[0].id : null; await saveData({ type: 'project_delete', projectName: deletedProjectName }); render(); } });
+    projectSelect.addEventListener('change', async () => { showLoader(); data.currentProjectId = projectSelect.value; await saveData({ type: 'project_switch' }); renderBoard(); });
     
-    projectSelect.addEventListener('change', async () => {
-        showLoader();
-        data.currentProjectId = projectSelect.value;
-        await saveData({ type: 'project_switch' }); 
-        renderBoard();
+    // Modified: Event handler to handle "show-more-link" and other clicks
+    boardContainer.addEventListener('click', async (e) => {
+        // Handle "Show More" link click
+        if (e.target.classList.contains('show-more-link')) {
+            e.preventDefault(); // Prevent link from navigating
+            const taskEl = e.target.closest('.task');
+            const p = taskEl.querySelector('p');
+            p.innerHTML = taskEl.dataset.fullDescription; // Show full text
+            return; // Stop further execution
+        }
+
+        if (e.target.classList.contains('add-task-btn')) {
+            openTaskModal(null, e.target.dataset.listId);
+        } else if (e.target.classList.contains('delete-task-btn')) {
+            const taskEl = e.target.closest('.task');
+            const taskId = taskEl.dataset.taskId;
+            const listId = taskEl.dataset.listId;
+            const list = findCurrentProject().lists.find(l => l.id === listId);
+            const task = list.tasks.find(t => t.id === taskId);
+            if (confirm(`คุณต้องการลบทาสก์ "${task.title}" หรือไม่?`)) {
+                list.tasks = list.tasks.filter(t => t.id !== taskId);
+                await saveData({ type: 'task_delete', taskTitle: task.title, listName: list.name });
+                renderBoard();
+            }
+        } else if (e.target.closest('.task')) {
+            const taskEl = e.target.closest('.task');
+            openTaskModal(taskEl.dataset.taskId, taskEl.closest('.list').dataset.listId);
+        }
     });
 
-    boardContainer.addEventListener('click', async (e) => { if (e.target.classList.contains('add-task-btn')) { openTaskModal(null, e.target.dataset.listId); } else if (e.target.classList.contains('delete-task-btn')) { const taskEl = e.target.closest('.task'); const taskId = taskEl.dataset.taskId; const listId = taskEl.dataset.listId; const list = findCurrentProject().lists.find(l => l.id === listId); const task = list.tasks.find(t => t.id === taskId); if (confirm(`คุณต้องการลบทาสก์ "${task.title}" หรือไม่?`)) { list.tasks = list.tasks.filter(t => t.id !== taskId); await saveData({ type: 'task_delete', taskTitle: task.title, listName: list.name }); renderBoard(); } } else if (e.target.closest('.task')) { const taskEl = e.target.closest('.task'); openTaskModal(taskEl.dataset.taskId, taskEl.closest('.list').dataset.listId); } });
     boardContainer.addEventListener('focusout', async (e) => { if (e.target.classList.contains('list-title')) { const newTitle = e.target.textContent; const listId = e.target.closest('.list').dataset.listId; const list = findCurrentProject().lists.find(l => l.id === listId); if (list && list.name !== newTitle) { const oldTitle = list.name; list.name = newTitle; await saveData({ type: 'list_rename', oldListName: oldTitle, newListName: newTitle }); } } });
     saveTaskBtn.addEventListener('click', async () => { const taskId = taskIdInput.value; const listId = sourceListIdInput.value; const title = taskTitleInput.value.trim(); const description = taskDescriptionInput.value.trim(); const dueDate = taskDueDateInput.value; if (!title) { alert('กรุณาใส่หัวข้อ'); return; } const list = findCurrentProject().lists.find(l => l.id === listId); let actionInfo; if (taskId) { const task = list.tasks.find(t => t.id === taskId); actionInfo = { type: 'task_edit', taskTitle: title, listName: list.name }; task.title = title; task.description = description; task.dueDate = dueDate; } else { list.tasks.push({ id: `task-${Date.now()}`, title, description, dueDate }); actionInfo = { type: 'task_create', taskTitle: title, listName: list.name }; } await saveData(actionInfo); renderBoard(); closeTaskModal(); });
     let draggedTask = null; boardContainer.addEventListener('dragstart', (e) => { if (e.target.classList.contains('task')) { draggedTask = e.target; e.target.classList.add('dragging'); } }); boardContainer.addEventListener('dragend', (e) => { if (e.target.classList.contains('task')) { e.target.classList.remove('dragging'); draggedTask = null; } }); boardContainer.addEventListener('dragover', (e) => e.preventDefault());
@@ -109,12 +162,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (diffMinutes <= 40 && diffMinutes > 39 && !task.notified['40min']) {
                         alert(`Reminder: Task "${task.title}" is due in 40 minutes!`);
                         task.notified['40min'] = true;
-                        saveData(); // Save the notified state
+                        saveData();
                     }
                     if (diffMinutes <= 30 && diffMinutes > 29 && !task.notified['30min']) {
                         alert(`Reminder: Task "${task.title}" is due in 30 minutes!`);
                         task.notified['30min'] = true;
-                        saveData(); // Save the notified state
+                        saveData();
                     }
                 }
             });
