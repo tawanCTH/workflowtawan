@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Project Board</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <h1>Project Board</h1>
+        <div class="project-controls">
+            <select id="project-select"></select>
+            <button id="add-project-btn">สร้างโปรเจกต์ใหม่</button>
+        </div>
+    </header>
+    <main id="board-container" class="board-container">
+        </main>
+    <div id="task-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2 id="modal-title">สร้าง Task ใหม่</h2>
+            <input type="hidden" id="task-id"><input type="hidden" id="source-list-id">
+            <label for="task-title">หัวข้อ:</label>
+            <input type="text" id="task-title" placeholder="เช่น ประชุมทีมการตลาด...">
+            <label for="task-description">รายละเอียด:</label>
+            <textarea id="task-description" placeholder="ใส่รายละเอียดของงานที่นี่..."></textarea>
+            <label for="task-due-date">กำหนดเวลาแจ้งเตือน:</label>
+            <input type="datetime-local" id="task-due-date">
+            <button id="save-task-btn">บันทึก</button>
+        </div>
+    </div>
+    <div id="notification-modal" class="modal">
+         <div class="modal-content">
+            <span class="close-btn" id="close-notification-btn">&times;</span>
+            <h2>แจ้งเตือนทางอีเมล</h2>
+            <p>กดปุ่มด้านล่างเพื่อเปิดโปรแกรมอีเมลและส่งการแจ้งเตือน</p>
+            <a id="send-email-link" class="email-button" href="#" target="_blank" rel="noopener noreferrer">เปิดโปรแกรมอีเมล</a>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
