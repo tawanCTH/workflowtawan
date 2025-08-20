@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const taskDueDateInput = document.getElementById('task-due-date');
 
     // --- PASTE YOUR GOOGLE SCRIPT URL HERE ---
-    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/ABC.../exec'; // << ❗❗❗ วาง URL ของคุณที่นี่ ❗❗❗
+    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzk6kNAQocrTRxchNFEP04NUKq-tfPMoFRuvjU2uJ2DgmZ8P5MVdbIkrcmYCs3BHrmSRg/exec'; // << ❗❗❗ วาง URL ของคุณที่นี่ ❗❗❗
 
     let data = {};
 
