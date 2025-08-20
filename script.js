@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const sendEmailLink = document.getElementById('send-email-link');
 
     // --- PASTE YOUR GOOGLE SCRIPT URL HERE ---
-    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/ABC.../exec'; // << ❗❗❗ วาง URL ของคุณที่นี่ ❗❗❗
+    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwvhrIH8DEUv3bytQzymsGrL63-MQ25ilZAwGbBvCaW9Q9SmzwF0lT9V525X9ghKpkxZQ/exec'; // << ❗❗❗ วาง URL ของคุณที่นี่ ❗❗❗
 
     let data = {};
 
