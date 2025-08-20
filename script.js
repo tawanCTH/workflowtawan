@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const taskDueDateInput = document.getElementById('task-due-date');
 
     // --- PASTE YOUR GOOGLE SCRIPT URL HERE ---
-    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzk6kNAQocrTRxchNFEP04NUKq-tfPMoFRuvjU2uJ2DgmZ8P5MVdbIkrcmYCs3BHrmSRg/exec'; // << ❗❗❗ วาง URL ของคุณที่นี่ ❗❗❗
+    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw2PDagLHHkp-Kcple_HO65y6CsWtc60dFiWKSapd-FrBVyyDnUjQD5tp0PIKTO5Ian3Q/exec'; // << ❗❗❗ วาง URL ล่าสุดของคุณที่นี่ ❗❗❗
 
     let data = {};
 
@@ -75,7 +75,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- EVENT HANDLERS ---
     addProjectBtn.addEventListener('click', async () => { const projectName = prompt('กรุณาใส่ชื่อโปรเจกต์ใหม่:'); if (projectName) { const newProject = { id: `proj-${Date.now()}`, name: projectName, lists: [{ id: `list-${Date.now()}-1`, name: "Todo", tasks: [] }, { id: `list-${Date.now()}-2`, name: "In Progress", tasks: [] }, { id: `list-${Date.now()}-3`, name: "Complete", tasks: [] }] }; data.projects.push(newProject); data.currentProjectId = newProject.id; await saveData({ type: 'project_create', projectName: projectName }); render(); } });
     deleteProjectBtn.addEventListener('click', async () => { const project = findCurrentProject(); if (!project) { alert("ไม่มีโปรเจกต์ให้ลบ"); return; } if (confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบโปรเจกต์ "${project.name}" ทั้งหมด?`)) { data.projects = data.projects.filter(p => p.id !== data.currentProjectId); const deletedProjectName = project.name; data.currentProjectId = data.projects.length > 0 ? data.projects[0].id : null; await saveData({ type: 'project_delete', projectName: deletedProjectName }); render(); } });
-    projectSelect.addEventListener('change', async () => { showLoader(); data.currentProjectId = projectSelect.value; await saveData(); renderBoard(); });
+    
+    projectSelect.addEventListener('change', async () => {
+        showLoader();
+        data.currentProjectId = projectSelect.value;
+        await saveData({ type: 'project_switch' }); 
+        renderBoard();
+    });
+
     boardContainer.addEventListener('click', async (e) => { if (e.target.classList.contains('add-task-btn')) { openTaskModal(null, e.target.dataset.listId); } else if (e.target.classList.contains('delete-task-btn')) { const taskEl = e.target.closest('.task'); const taskId = taskEl.dataset.taskId; const listId = taskEl.dataset.listId; const list = findCurrentProject().lists.find(l => l.id === listId); const task = list.tasks.find(t => t.id === taskId); if (confirm(`คุณต้องการลบทาสก์ "${task.title}" หรือไม่?`)) { list.tasks = list.tasks.filter(t => t.id !== taskId); await saveData({ type: 'task_delete', taskTitle: task.title, listName: list.name }); renderBoard(); } } else if (e.target.closest('.task')) { const taskEl = e.target.closest('.task'); openTaskModal(taskEl.dataset.taskId, taskEl.closest('.list').dataset.listId); } });
     boardContainer.addEventListener('focusout', async (e) => { if (e.target.classList.contains('list-title')) { const newTitle = e.target.textContent; const listId = e.target.closest('.list').dataset.listId; const list = findCurrentProject().lists.find(l => l.id === listId); if (list && list.name !== newTitle) { const oldTitle = list.name; list.name = newTitle; await saveData({ type: 'list_rename', oldListName: oldTitle, newListName: newTitle }); } } });
     saveTaskBtn.addEventListener('click', async () => { const taskId = taskIdInput.value; const listId = sourceListIdInput.value; const title = taskTitleInput.value.trim(); const description = taskDescriptionInput.value.trim(); const dueDate = taskDueDateInput.value; if (!title) { alert('กรุณาใส่หัวข้อ'); return; } const list = findCurrentProject().lists.find(l => l.id === listId); let actionInfo; if (taskId) { const task = list.tasks.find(t => t.id === taskId); actionInfo = { type: 'task_edit', taskTitle: title, listName: list.name }; task.title = title; task.description = description; task.dueDate = dueDate; } else { list.tasks.push({ id: `task-${Date.now()}`, title, description, dueDate }); actionInfo = { type: 'task_create', taskTitle: title, listName: list.name }; } await saveData(actionInfo); renderBoard(); closeTaskModal(); });
