@@ -18,13 +18,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const taskDueDateInput = document.getElementById('task-due-date');
 
     // --- PASTE YOUR GOOGLE SCRIPT URL HERE ---
-    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw2PDagLHHkp-Kcple_HO65y6CsWtc60dFiWKSapd-FrBVyyDnUjQD5tp0PIKTO5Ian3Q/exec'; // << ❗❗❗ วาง URL ล่าสุดของคุณที่นี่ ❗❗❗
+    const GOOGLE_SCRIPT_URL = 'YOUR_GOOGLE_SCRIPT_URL_HERE'; // << ❗❗❗ วาง URL ล่าสุดของคุณที่นี่ ❗❗❗
 
     let data = {};
 
-    // --- LOADER FUNCTIONS ---
+    // --- LOADER & TEXTAREA FUNCTIONS ---
     function showLoader() { loader.style.display = 'flex'; }
     function hideLoader() { loader.style.display = 'none'; }
+    function autoResizeTextarea(element) {
+        element.style.height = 'auto';
+        element.style.height = (element.scrollHeight) + 'px';
+    }
+    taskDescriptionInput.addEventListener('input', () => autoResizeTextarea(taskDescriptionInput));
+
 
     // --- DATA MANAGEMENT ---
     async function initializeData() {
@@ -156,6 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
             modalTitle.textContent = 'สร้าง Task ใหม่';
         }
         taskModal.style.display = 'block';
+        setTimeout(() => autoResizeTextarea(taskDescriptionInput), 0);
     }
 
     function closeTaskModal() {
