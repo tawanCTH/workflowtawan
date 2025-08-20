@@ -71,14 +71,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderProjectSelector() { projectSelect.innerHTML = ''; data.projects.forEach(project => { const option = document.createElement('option'); option.value = project.id; option.textContent = project.name; if (project.id === data.currentProjectId) { option.selected = true; } projectSelect.appendChild(option); }); }
     function renderBoard() { boardContainer.innerHTML = ''; const project = findCurrentProject(); if (!project) return; project.lists.forEach(list => { const listEl = document.createElement('div'); listEl.className = 'list'; listEl.dataset.listId = list.id; listEl.innerHTML = `<div class="list-header"><h2 class="list-title" contenteditable="true">${list.name}</h2><button class="add-task-btn" data-list-id="${list.id}">+</button></div><div class="task-list"></div>`; const taskListEl = listEl.querySelector('.task-list'); list.tasks.forEach(task => { const taskEl = createTaskElement(task, list.id); taskListEl.appendChild(taskEl); }); boardContainer.appendChild(listEl); }); }
     
-    // --- MODIFIED: createTaskElement with JS Truncation ---
     function createTaskElement(task, listId) {
         const taskEl = document.createElement('div');
         taskEl.className = 'task';
         taskEl.draggable = true;
         taskEl.dataset.taskId = task.id;
         taskEl.dataset.listId = listId;
-        // Store the full description in a data attribute
         taskEl.dataset.fullDescription = task.description || '';
 
         let descriptionHtml = task.description || '';
@@ -101,23 +99,18 @@ document.addEventListener('DOMContentLoaded', () => {
         return taskEl;
     }
 
-
     // --- EVENT HANDLERS ---
     addProjectBtn.addEventListener('click', async () => { const projectName = prompt('กรุณาใส่ชื่อโปรเจกต์ใหม่:'); if (projectName) { const newProject = { id: `proj-${Date.now()}`, name: projectName, lists: [{ id: `list-${Date.now()}-1`, name: "Todo", tasks: [] }, { id: `list-${Date.now()}-2`, name: "In Progress", tasks: [] }, { id: `list-${Date.now()}-3`, name: "Complete", tasks: [] }] }; data.projects.push(newProject); data.currentProjectId = newProject.id; await saveData({ type: 'project_create', projectName: projectName }); render(); } });
     deleteProjectBtn.addEventListener('click', async () => { const project = findCurrentProject(); if (!project) { alert("ไม่มีโปรเจกต์ให้ลบ"); return; } if (confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบโปรเจกต์ "${project.name}" ทั้งหมด?`)) { data.projects = data.projects.filter(p => p.id !== data.currentProjectId); const deletedProjectName = project.name; data.currentProjectId = data.projects.length > 0 ? data.projects[0].id : null; await saveData({ type: 'project_delete', projectName: deletedProjectName }); render(); } });
-    projectSelect.addEventListener('change', async () => { showLoader(); data.currentProjectId = projectSelect.value; await saveData({ type: 'project_switch' }); renderBoard(); });
     
-    // Modified: Event handler to handle "show-more-link" and other clicks
-    boardContainer.addEventListener('click', async (e) => {
-        // Handle "Show More" link click
-        if (e.target.classList.contains('show-more-link')) {
-            e.preventDefault(); // Prevent link from navigating
-            const taskEl = e.target.closest('.task');
-            const p = taskEl.querySelector('p');
-            p.innerHTML = taskEl.dataset.fullDescription; // Show full text
-            return; // Stop further execution
-        }
+    projectSelect.addEventListener('change', async () => {
+        showLoader();
+        data.currentProjectId = projectSelect.value;
+        await saveData({ type: 'project_switch' }); 
+        renderBoard();
+    });
 
+    boardContainer.addEventListener('click', async (e) => {
         if (e.target.classList.contains('add-task-btn')) {
             openTaskModal(null, e.target.dataset.listId);
         } else if (e.target.classList.contains('delete-task-btn')) {
@@ -132,8 +125,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderBoard();
             }
         } else if (e.target.closest('.task')) {
+            e.preventDefault();
             const taskEl = e.target.closest('.task');
-            openTaskModal(taskEl.dataset.taskId, taskEl.closest('.list').dataset.listId);
+            openTaskModal(taskEl.dataset.taskId, taskEl.dataset.listId);
         }
     });
 
@@ -143,8 +137,31 @@ document.addEventListener('DOMContentLoaded', () => {
     boardContainer.addEventListener('drop', async (e) => { e.preventDefault(); if (draggedTask) { const targetListEl = e.target.closest('.list'); if (targetListEl) { const targetListId = targetListEl.dataset.listId; const taskId = draggedTask.dataset.taskId; const sourceListId = draggedTask.closest('.list').dataset.listId; if (sourceListId !== targetListId) { const project = findCurrentProject(); const sourceList = project.lists.find(l => l.id === sourceListId); const targetList = project.lists.find(l => l.id === targetListId); const taskIndex = sourceList.tasks.findIndex(t => t.id === taskId); const [task] = sourceList.tasks.splice(taskIndex, 1); targetList.tasks.push(task); const actionInfo = { type: 'task_move', taskTitle: task.title, taskDescription: task.description, fromListName: sourceList.name, toListName: targetList.name }; await saveData(actionInfo); renderBoard(); } } } });
 
     // --- MODAL FUNCTIONS ---
-    function openTaskModal(taskId = null, listId) { taskTitleInput.value = ''; taskDescriptionInput.value = ''; taskDueDateInput.value = ''; taskIdInput.value = ''; sourceListIdInput.value = listId; if (taskId) { modalTitle.textContent = 'แก้ไข Task'; const task = findCurrentProject().lists.find(l => l.id === listId).tasks.find(t => t.id === taskId); taskIdInput.value = task.id; taskTitleInput.value = task.title; taskDescriptionInput.value = task.description; if (task.dueDate) { taskDueDateInput.value = task.dueDate; } } else { modalTitle.textContent = 'สร้าง Task ใหม่'; } taskModal.style.display = 'block'; }
-    function closeTaskModal() { taskModal.style.display = 'none'; }
+    function openTaskModal(taskId = null, listId) {
+        taskTitleInput.value = '';
+        taskDescriptionInput.value = '';
+        taskDueDateInput.value = '';
+        taskIdInput.value = '';
+        sourceListIdInput.value = listId;
+        if (taskId) {
+            modalTitle.textContent = 'แก้ไข Task';
+            const task = findCurrentProject().lists.find(l => l.id === listId).tasks.find(t => t.id === taskId);
+            taskIdInput.value = task.id;
+            taskTitleInput.value = task.title;
+            taskDescriptionInput.value = task.description;
+            if (task.dueDate) {
+                taskDueDateInput.value = task.dueDate;
+            }
+        } else {
+            modalTitle.textContent = 'สร้าง Task ใหม่';
+        }
+        taskModal.style.display = 'block';
+    }
+
+    function closeTaskModal() {
+        taskModal.style.display = 'none';
+    }
+
     closeModalBtn.addEventListener('click', closeTaskModal);
     window.addEventListener('click', (e) => { if (e.target === taskModal) { closeTaskModal(); } });
 
