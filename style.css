@@ -108,3 +108,17 @@ select:hover, button:hover { background-color: var(--accent-orange); border-colo
 .delete-task-btn:hover {
     color: var(--accent-orange);
 }
+
+/* --- Code for Truncating Long Text --- */
+
+.task h4,
+.task p {
+  white-space: nowrap;     /* ป้องกันไม่ให้ข้อความขึ้นบรรทัดใหม่ */
+  overflow: hidden;        /* ซ่อนข้อความส่วนที่ล้นออกไป */
+  text-overflow: ellipsis; /* แสดง "..." ที่ท้ายข้อความที่ถูกตัด */
+}
+
+.task p {
+  /* ทำให้รายละเอียดดูจางลงเล็กน้อยเหมือนเดิม */
+  opacity: 0.8; 
+}
