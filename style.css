@@ -129,20 +129,20 @@ button:hover {
 }
 
 /* --- Corrected Text Truncation --- */
-.task h4 {
+/* .task h4 {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-}
+} */
 
-.task p {
+/* .task p {
     margin-top: 0.5rem;
     font-size: 0.9rem;
     opacity: 0.8;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-}
+} */
 
 .task-due-date {
     font-size: 0.8rem;
