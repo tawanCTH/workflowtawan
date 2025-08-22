@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const taskDueDateInput = document.getElementById('task-due-date');
 
     // --- PASTE YOUR GOOGLE SCRIPT URL HERE ---
-    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw2PDagLHHkp-Kcple_HO65y6CsWtc60dFiWKSapd-FrBVyyDnUjQD5tp0PIKTO5Ian3Q/exec'; // << ❗❗❗ วาง URL ล่าสุดของคุณที่นี่ ❗❗❗
+    const GOOGLE_SCRIPT_URL = 'YOUR_GOOGLE_SCRIPT_URL_HERE'; // << ❗❗❗ วาง URL ล่าสุดของคุณที่นี่ ❗❗❗
 
     let data = {};
 
@@ -75,12 +75,32 @@ document.addEventListener('DOMContentLoaded', () => {
     function findCurrentProject() { return data.projects.find(p => p.id === data.currentProjectId); }
     function render() { renderProjectSelector(); renderBoard(); }
     function renderProjectSelector() { projectSelect.innerHTML = ''; data.projects.forEach(project => { const option = document.createElement('option'); option.value = project.id; option.textContent = project.name; if (project.id === data.currentProjectId) { option.selected = true; } projectSelect.appendChild(option); }); }
-    function renderBoard() { boardContainer.innerHTML = ''; const project = findCurrentProject(); if (!project) return; project.lists.forEach(list => { const listEl = document.createElement('div'); listEl.className = 'list'; listEl.dataset.listId = list.id; listEl.innerHTML = `<div class="list-header"><h2 class="list-title" contenteditable="true">${list.name}</h2><button class="add-task-btn" data-list-id="${list.id}">+</button></div><div class="task-list"></div>`; const taskListEl = listEl.querySelector('.task-list'); list.tasks.forEach(task => { const taskEl = createTaskElement(task, list.id); taskListEl.appendChild(taskEl); }); boardContainer.appendChild(listEl); }); }
     
+    function renderBoard() {
+        boardContainer.innerHTML = '';
+        const project = findCurrentProject();
+        if (!project) return;
+        project.lists.forEach(list => {
+            const listEl = document.createElement('div');
+            listEl.className = 'list';
+            listEl.dataset.listId = list.id;
+            listEl.innerHTML = `<div class="list-header"><h2 class="list-title" contenteditable="true">${list.name}</h2><button class="add-task-btn" data-list-id="${list.id}">+</button></div><div class="task-list"></div>`;
+            const taskListEl = listEl.querySelector('.task-list');
+            list.tasks.forEach(task => {
+                const taskEl = createTaskElement(task, list.id);
+                taskListEl.appendChild(taskEl);
+            });
+            boardContainer.appendChild(listEl);
+        });
+        
+        // New: Initialize Drag and Drop after rendering
+        initializeDragAndDrop();
+    }
+
     function createTaskElement(task, listId) {
         const taskEl = document.createElement('div');
         taskEl.className = 'task';
-        taskEl.draggable = true;
+        // taskEl.draggable = true; // No longer needed
         taskEl.dataset.taskId = task.id;
         taskEl.dataset.listId = listId;
         taskEl.dataset.fullDescription = task.description || '';
@@ -89,13 +109,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (descriptionHtml.length > 50) {
             descriptionHtml = `${descriptionHtml.substring(0, 50)}... <a href="#" class="show-more-link"> (กดเพื่อดูเพิ่มเติม)</a>`;
         }
-
         let dueDateHTML = '';
         if (task.dueDate) {
             const date = new Date(task.dueDate);
             dueDateHTML = `<div class="task-due-date">แจ้งเตือน: ${date.toLocaleString('th-TH')}</div>`;
         }
-
         taskEl.innerHTML = `
             <button class="delete-task-btn" title="ลบทาสก์นี้">&times;</button>
             <h4>${task.title}</h4>
@@ -105,17 +123,47 @@ document.addEventListener('DOMContentLoaded', () => {
         return taskEl;
     }
 
+    // --- NEW DRAG AND DROP LOGIC with SortableJS ---
+    function initializeDragAndDrop() {
+        const taskLists = document.querySelectorAll('.task-list');
+        taskLists.forEach(taskList => {
+            new Sortable(taskList, {
+                group: 'shared', // Allows dragging between lists
+                animation: 150,
+                onEnd: (evt) => { // Function to run after drop
+                    const taskId = evt.item.dataset.taskId;
+                    const sourceListId = evt.from.closest('.list').dataset.listId;
+                    const targetListId = evt.to.closest('.list').dataset.listId;
+                    
+                    if (sourceListId !== targetListId) {
+                        const project = findCurrentProject();
+                        const sourceList = project.lists.find(l => l.id === sourceListId);
+                        const targetList = project.lists.find(l => l.id === targetListId);
+                        const taskIndex = sourceList.tasks.findIndex(t => t.id === taskId);
+                        
+                        const [task] = sourceList.tasks.splice(taskIndex, 1);
+                        targetList.tasks.splice(evt.newIndex, 0, task); // Add to new list at correct index
+
+                        const actionInfo = {
+                            type: 'task_move',
+                            taskTitle: task.title,
+                            taskDescription: task.description,
+                            fromListName: sourceList.name,
+                            toListName: targetList.name
+                        };
+                        saveData(actionInfo);
+                    }
+                }
+            });
+        });
+    }
+
+
     // --- EVENT HANDLERS ---
     addProjectBtn.addEventListener('click', async () => { const projectName = prompt('กรุณาใส่ชื่อโปรเจกต์ใหม่:'); if (projectName) { const newProject = { id: `proj-${Date.now()}`, name: projectName, lists: [{ id: `list-${Date.now()}-1`, name: "Todo", tasks: [] }, { id: `list-${Date.now()}-2`, name: "In Progress", tasks: [] }, { id: `list-${Date.now()}-3`, name: "Complete", tasks: [] }] }; data.projects.push(newProject); data.currentProjectId = newProject.id; await saveData({ type: 'project_create', projectName: projectName }); render(); } });
     deleteProjectBtn.addEventListener('click', async () => { const project = findCurrentProject(); if (!project) { alert("ไม่มีโปรเจกต์ให้ลบ"); return; } if (confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบโปรเจกต์ "${project.name}" ทั้งหมด?`)) { data.projects = data.projects.filter(p => p.id !== data.currentProjectId); const deletedProjectName = project.name; data.currentProjectId = data.projects.length > 0 ? data.projects[0].id : null; await saveData({ type: 'project_delete', projectName: deletedProjectName }); render(); } });
+    projectSelect.addEventListener('change', async () => { showLoader(); data.currentProjectId = projectSelect.value; await saveData({ type: 'project_switch' }); renderBoard(); });
     
-    projectSelect.addEventListener('change', async () => {
-        showLoader();
-        data.currentProjectId = projectSelect.value;
-        await saveData({ type: 'project_switch' }); 
-        renderBoard();
-    });
-
     boardContainer.addEventListener('click', async (e) => {
         if (e.target.classList.contains('add-task-btn')) {
             openTaskModal(null, e.target.dataset.listId);
@@ -139,8 +187,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     boardContainer.addEventListener('focusout', async (e) => { if (e.target.classList.contains('list-title')) { const newTitle = e.target.textContent; const listId = e.target.closest('.list').dataset.listId; const list = findCurrentProject().lists.find(l => l.id === listId); if (list && list.name !== newTitle) { const oldTitle = list.name; list.name = newTitle; await saveData({ type: 'list_rename', oldListName: oldTitle, newListName: newTitle }); } } });
     saveTaskBtn.addEventListener('click', async () => { const taskId = taskIdInput.value; const listId = sourceListIdInput.value; const title = taskTitleInput.value.trim(); const description = taskDescriptionInput.value.trim(); const dueDate = taskDueDateInput.value; if (!title) { alert('กรุณาใส่หัวข้อ'); return; } const list = findCurrentProject().lists.find(l => l.id === listId); let actionInfo; if (taskId) { const task = list.tasks.find(t => t.id === taskId); actionInfo = { type: 'task_edit', taskTitle: title, listName: list.name }; task.title = title; task.description = description; task.dueDate = dueDate; } else { list.tasks.push({ id: `task-${Date.now()}`, title, description, dueDate }); actionInfo = { type: 'task_create', taskTitle: title, listName: list.name }; } await saveData(actionInfo); renderBoard(); closeTaskModal(); });
-    let draggedTask = null; boardContainer.addEventListener('dragstart', (e) => { if (e.target.classList.contains('task')) { draggedTask = e.target; e.target.classList.add('dragging'); } }); boardContainer.addEventListener('dragend', (e) => { if (e.target.classList.contains('task')) { e.target.classList.remove('dragging'); draggedTask = null; } }); boardContainer.addEventListener('dragover', (e) => e.preventDefault());
-    boardContainer.addEventListener('drop', async (e) => { e.preventDefault(); if (draggedTask) { const targetListEl = e.target.closest('.list'); if (targetListEl) { const targetListId = targetListEl.dataset.listId; const taskId = draggedTask.dataset.taskId; const sourceListId = draggedTask.closest('.list').dataset.listId; if (sourceListId !== targetListId) { const project = findCurrentProject(); const sourceList = project.lists.find(l => l.id === sourceListId); const targetList = project.lists.find(l => l.id === targetListId); const taskIndex = sourceList.tasks.findIndex(t => t.id === taskId); const [task] = sourceList.tasks.splice(taskIndex, 1); targetList.tasks.push(task); const actionInfo = { type: 'task_move', taskTitle: task.title, taskDescription: task.description, fromListName: sourceList.name, toListName: targetList.name }; await saveData(actionInfo); renderBoard(); } } } });
+    
+    // --- DELETE OLD DRAG AND DROP LISTENERS ---
+    // The following listeners are no longer needed, they have been replaced by SortableJS
+    // let draggedTask = null; boardContainer.addEventListener('dragstart', ...);
+    // boardContainer.addEventListener('dragend', ...);
+    // boardContainer.addEventListener('dragover', ...);
+    // boardContainer.addEventListener('drop', ...);
+
 
     // --- MODAL FUNCTIONS ---
     function openTaskModal(taskId = null, listId) {
@@ -164,11 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
         taskModal.style.display = 'block';
         setTimeout(() => autoResizeTextarea(taskDescriptionInput), 0);
     }
-
-    function closeTaskModal() {
-        taskModal.style.display = 'none';
-    }
-
+    function closeTaskModal() { taskModal.style.display = 'none'; }
     closeModalBtn.addEventListener('click', closeTaskModal);
     window.addEventListener('click', (e) => { if (e.target === taskModal) { closeTaskModal(); } });
 
